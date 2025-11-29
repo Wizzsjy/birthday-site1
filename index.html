@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Birthday Preview · 生日预告</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 字体 -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: radial-gradient(circle at top, #111827 0, #020617 40%, #000 100%);
+      --gold: #fbbf24;
+      --gold-soft: #f59e0b;
+      --gold-pale: #facc15;
+      --cyan: #22d3ee;
+      --text-main: #e5e7eb;
+      --text-sub: #9ca3af;
+      --border-soft: rgba(148, 163, 184, 0.6);
+      --glass-bg: rgba(15, 23, 42, 0.9);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Poppins", "Noto Sans SC", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: #020617;
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 粒子画布在最底层 */
+    #particleCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: -4;
+      pointer-events: none;
+    }
+
+    .bg {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-main);
+      z-index: -3;
+    }
+
+    .glow-orb {
+      position: absolute;
+      width: 420px;
+      height: 420px;
+      border-radius: 999px;
+      filter: blur(90px);
+      opacity: 0.32;
+      mix-blend-mode: screen;
+    }
+
+    .glow-1 {
+      top: -120px;
+      left: -80px;
+      background: radial-gradient(circle, #f97316, transparent);
+    }
+
+    .glow-2 {
+      bottom: -120px;
+      right: -60px;
+      background: radial-gradient(circle, #facc15, transparent);
+    }
+
+    .glow-3 {
+      top: 30%;
+      right: 10%;
+      background: radial-gradient(circle, #22d3ee, transparent);
+      opacity: 0.28;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+      position: relative;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      gap: 16px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #fff, var(--gold));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #111827;
+      box-shadow:
+        0 0 18px rgba(250, 204, 21, 0.7),
+        0 0 40px rgba(234, 179, 8, 0.8);
+      font-size: 14px;
+    }
+
+    /* TODO: Y */
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--text-sub);
+    }
+
+    .logo-text span:last-child {
+      font-size: 12px;
+      color: #f9fafb;
+      font-weight: 600;
+    }
+
+    .badge-live {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(250, 204, 21, 0.8);
+      background: radial-gradient(circle at 10% 0, rgba(250, 204, 21, 0.18), rgba(15, 23, 42, 0.96));
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(18px);
+      color: var(--text-main);
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 3.1fr) minmax(0, 2.2fr);
+      gap: 26px;
+      margin-bottom: 34px;
+      align-items: center;
+    }
+
+    @media (max-width: 860px) {
+      .hero {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .hero-title {
+      font-size: clamp(32px, 5vw, 44px);
+      line-height: 1.1;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      margin-bottom: 14px;
+    }
+
+    .hero-title span.highlight {
+      background: linear-gradient(120deg, var(--gold-pale), var(--gold-soft));
+      -webkit-background-clip: text;
+      color: transparent;
+      text-shadow:
+        0 0 25px rgba(251, 191, 36, 0.6),
+        0 0 55px rgba(245, 158, 11, 0.8);
+    }
+
+    .hero-sub-en {
+      font-size: 15px;
+      color: var(--text-sub);
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    .hero-sub-cn {
+      font-size: 13px;
+      color: #9ca3af;
+      line-height: 1.7;
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+      margin-bottom: 18px;
+    }
+
+    .hero-sub-cn strong {
+      color: #e5e7eb;
+    }
+
+    .hero-cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .btn-primary {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 22px;
+      font-size: 14px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      background: radial-gradient(circle at 10% 0, #fef3c7, var(--gold-soft));
+      color: #111827;
+      box-shadow:
+        0 12px 35px rgba(248, 181, 40, 0.85),
+        0 0 20px rgba(250, 204, 21, 0.7);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px) scale(1.02);
+      filter: brightness(1.05);
+      box-shadow:
+        0 16px 45px rgba(248, 181, 40, 1),
+        0 0 30px rgba(250, 204, 21, 0.9);
+    }
+
+    .btn-ghost {
+      border-radius: 999px;
+      padding: 9px 18px;
+      font-size: 13px;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      background: rgba(15, 23, 42, 0.8);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-sub);
+      cursor: pointer;
+      backdrop-filter: blur(20px);
+      transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(15, 23, 42, 0.98);
+      border-color: rgba(249, 250, 251, 0.9);
+      color: #e5e7eb;
+    }
+
+    .hero-meta {
+      font-size: 11px;
+      color: var(--text-sub);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .hero-meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.9);
+    }
+
+    /* 倒计时卡片 */
+    .card {
+      border-radius: 24px;
+      padding: 18px 18px 16px;
+      background: radial-gradient(circle at top left, rgba(250, 204, 21, 0.15), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(250, 204, 21, 0.6);
+      box-shadow:
+        0 26px 70px rgba(15, 23, 42, 0.9),
+        0 0 40px rgba(0, 0, 0, 1);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(22px);
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: conic-gradient(from 200deg, rgba(250, 204, 21, 0.18), transparent, rgba(34, 211, 238, 0.22), transparent, rgba(250, 204, 21, 0.18));
+      opacity: 0.8;
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    .card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .countdown-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: #fef3c7;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .countdown-label span:last-child {
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+      font-size: 11px;
+      color: #fcd34d;
+    }
+
+    .countdown-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    @media (max-width: 480px) {
+      .countdown-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .count-box {
+      border-radius: 18px;
+      padding: 9px 8px;
+      background: radial-gradient(circle at 0 0, rgba(250, 204, 21, 0.12), rgba(15, 23, 42, 0.96));
+      border: 1px solid rgba(248, 250, 252, 0.18);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .count-number {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+    }
+
+    .count-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: #facc15;
+    }
+
+    .count-extra {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 11px;
+      color: #e5e7eb;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill {
+      font-size: 10px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      border: 1px solid rgba(250, 204, 21, 0.65);
+      background: rgba(0, 0, 0, 0.7);
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* Section 标题 */
+    section {
+      margin-bottom: 34px;
+    }
+
+    .section-title {
+      font-size: 17px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+
+    .section-sub-en {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+
+    .section-sub-cn {
+      font-size: 13px;
+      color: #9ca3af;
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+      margin-bottom: 14px;
+    }
+
+    /* Memories */
+    .memory-strip {
+      display: flex;
+      gap: 16px;
+      padding-bottom: 6px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 184, 0.8) transparent;
+    }
+
+    .memory-strip::-webkit-scrollbar {
+      height: 6px;
+    }
+    .memory-strip::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .memory-strip::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.8);
+      border-radius: 999px;
+    }
+
+    .memory-card {
+      min-width: 230px;
+      max-width: 260px;
+      border-radius: 20px;
+      padding: 10px 10px 12px;
+      background: linear-gradient(145deg, #020617, #020617);
+      border: 1px solid rgba(148, 163, 184, 0.75);
+      box-shadow:
+        0 20px 45px rgba(0, 0, 0, 0.95),
+        0 0 18px rgba(15, 23, 42, 0.9);
+      position: relative;
+      transform-origin: center center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .memory-card:nth-child(1) { transform: rotate(-1.5deg); }
+    .memory-card:nth-child(2) { transform: rotate(1.8deg) translateY(6px); }
+    .memory-card:nth-child(3) { transform: rotate(-2.2deg) translateY(-4px); }
+
+    .memory-card:hover {
+      transform: translateY(-4px) scale(1.01);
+      border-color: rgba(250, 204, 21, 0.9);
+      box-shadow:
+        0 26px 60px rgba(0, 0, 0, 0.98),
+        0 0 26px rgba(234, 179, 8, 0.9);
+    }
+
+    .memory-photo {
+      height: 150px;
+      border-radius: 14px;
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(circle at 0 0, rgba(34, 211, 238, 0.4), rgba(15, 23, 42, 0.95));
+    }
+
+    .memory-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scale(1.05);
+      filter: saturate(1.1) contrast(1.1);
+      transition: transform 0.35s ease, filter 0.35s ease;
+    }
+
+    .memory-card:hover .memory-photo img {
+      transform: scale(1.12);
+      filter: saturate(1.2) contrast(1.15);
+    }
+
+    .memory-photo::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 0 0, rgba(250, 204, 21, 0.16), transparent 55%);
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    .memory-tag {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      background: rgba(0, 0, 0, 0.75);
+      color: #f9fafb;
+      border: 1px solid rgba(249, 250, 251, 0.6);
+    }
+
+    .memory-body {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #e5e7eb;
+      line-height: 1.5;
+    }
+
+    .memory-cn {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #9ca3af;
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+      line-height: 1.5;
+    }
+
+    .memory-meta {
+      margin-top: 6px;
+      font-size: 10px;
+      color: #6b7280;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Game / Unlock 区域 */
+    .game-wrapper {
+      border-radius: 24px;
+      padding: 18px 16px 18px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(3, 7, 18, 1));
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      box-shadow:
+        0 22px 70px rgba(0, 0, 0, 0.98),
+        0 0 28px rgba(3, 7, 18, 0.9);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-wrapper::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at 20% 0, rgba(250, 204, 21, 0.18), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .game-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .game-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+
+    .game-label {
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 11px;
+      color: #facc15;
+    }
+
+    .lock-status {
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(248, 250, 252, 0.25);
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    .lock-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #f97316;
+      box-shadow: 0 0 14px rgba(248, 113, 113, 0.9);
+      transition: background 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    body.unlocked .lock-dot {
+      background: #22c55e;
+      box-shadow: 0 0 14px rgba(34, 197, 94, 0.9);
+    }
+
+    .game-instruction {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-bottom: 10px;
+    }
+
+    .game-instruction-cn {
+      font-size: 12px;
+      color: #9ca3af;
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+      margin-bottom: 12px;
+    }
+
+    .game-area {
+      position: relative;
+      height: 180px;
+      border-radius: 20px;
+      border: 1px dashed rgba(148, 163, 184, 0.6);
+      background: radial-gradient(circle at 0 0, rgba(15, 23, 42, 0.95), #020617);
+      overflow: hidden;
+    }
+
+    .game-orb {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #fef3c7, #fbbf24);
+      box-shadow:
+        0 0 18px rgba(250, 204, 21, 0.8),
+        0 0 40px rgba(234, 179, 8, 0.9);
+      cursor: pointer;
+      opacity: 0.4;
+      transform: translate(-50%, -50%) scale(0.9);
+      transition: opacity 0.18s ease, transform 0.2s ease, box-shadow 0.2s ease;
+      animation: orbFloat 7s infinite ease-in-out;
+    }
+
+    .game-orb span {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #111827;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .game-orb[data-index="0"] { top: 25%; left: 25%; animation-delay: 0s; }
+    .game-orb[data-index="1"] { top: 55%; left: 70%; animation-delay: 0.8s; }
+    .game-orb[data-index="2"] { top: 78%; left: 40%; animation-delay: 1.4s; }
+
+    .game-orb.active {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.08);
+      box-shadow:
+        0 0 26px rgba(250, 204, 21, 1),
+        0 0 70px rgba(234, 179, 8, 1);
+    }
+
+    .game-hint {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #9ca3af;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+
+    @keyframes orbFloat {
+      0% { transform: translate(-50%, -50%) translateY(0) scale(0.9); }
+      50% { transform: translate(-50%, -50%) translateY(-10px) scale(1.02); }
+      100% { transform: translate(-50%, -50%) translateY(0) scale(0.9); }
+    }
+
+    /* Gift 区域 */
+    .gift-section {
+      margin-top: 18px;
+      border-radius: 24px;
+      padding: 18px 16px 16px;
+      background: radial-gradient(circle at top right, rgba(34, 211, 238, 0.16), rgba(15, 23, 42, 0.96));
+      border: 1px solid rgba(148, 163, 184, 0.75);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(22px);
+    }
+
+    .gift-section::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at 0 0, rgba(250, 204, 21, 0.18), transparent 55%);
+      opacity: 0.8;
+      pointer-events: none;
+    }
+
+    .gift-inner {
+      position: relative;
+      z-index: 1;
+      opacity: 0.2;
+      filter: blur(4px);
+      pointer-events: none;
+      transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
+      transform: translateY(4px);
+    }
+
+    body.unlocked .gift-inner {
+      opacity: 1;
+      filter: blur(0);
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .gift-lock-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.98));
+      color: #e5e7eb;
+      font-size: 12px;
+      text-align: center;
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+      padding: 0 26px;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .gift-lock-overlay span {
+      opacity: 0.9;
+    }
+
+    body.unlocked .gift-lock-overlay {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .gift-head {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #e5e7eb;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .gift-head span:last-child {
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+      color: #e5e7eb;
+    }
+
+    .gift-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2.3fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 860px) {
+      .gift-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    /* 数字信件 */
+    .letter-box {
+      border-radius: 18px;
+      padding: 12px 12px 10px;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      box-shadow:
+        inset 0 0 0 1px rgba(15, 23, 42, 0.8),
+        0 18px 45px rgba(0, 0, 0, 0.95);
+    }
+
+    .letter-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #facc15;
+      margin-bottom: 6px;
+    }
+
+    .letter-en {
+      font-size: 13px;
+      color: #e5e7eb;
+      line-height: 1.7;
+      margin-bottom: 8px;
+    }
+
+    .letter-cn {
+      font-size: 13px;
+      color: #e5e7eb;
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+      line-height: 1.8;
+      margin-bottom: 10px;
+    }
+
+    .letter-sign {
+      font-size: 11px;
+      color: #9ca3af;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+    }
+
+    /* 诗卡滑动区 */
+    .poem-wrapper {
+      border-radius: 18px;
+      padding: 12px 12px 10px;
+      background: radial-gradient(circle at 10% 0, rgba(34, 211, 238, 0.2), rgba(15, 23, 42, 0.98));
+      border: 1px solid rgba(148, 163, 184, 0.85);
+      box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.95),
+        0 0 20px rgba(15, 23, 42, 0.9);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .poem-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #e5e7eb;
+    }
+
+    .poem-track {
+      position: relative;
+      overflow: hidden;
+      border-radius: 14px;
+      margin-top: 4px;
+      min-height: 110px;
+    }
+
+    .poem-inner {
+      display: flex;
+      transition: transform 0.3s ease;
+      will-change: transform;
+    }
+
+    .poem-card {
+      min-width: 100%;
+      padding: 10px 12px 12px;
+      background: rgba(0, 0, 0, 0.7);
+      border-right: 1px solid rgba(30, 64, 175, 0.2);
+    }
+
+    .poem-en {
+      font-size: 13px;
+      color: #e5e7eb;
+      margin-bottom: 6px;
+    }
+
+    .poem-cn {
+      font-size: 12px;
+      color: #9ca3af;
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+    }
+
+    .poem-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      font-size: 11px;
+      color: #9ca3af;
+      gap: 10px;
+    }
+
+    .poem-buttons {
+      display: flex;
+      gap: 6px;
+    }
+
+    .poem-btn {
+      border-radius: 999px;
+      padding: 4px 10px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.9);
+      cursor: pointer;
+      font-size: 11px;
+      color: #e5e7eb;
+    }
+
+    .poem-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    footer {
+      margin-top: 24px;
+      font-size: 11px;
+      color: #6b7280;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+    }
+
+    footer strong {
+      color: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <!-- 互动粒子背景画布 -->
+  <canvas id="particleCanvas"></canvas>
+
+  <div class="bg">
+    <div class="glow-orb glow-1"></div>
+    <div class="glow-orb glow-2"></div>
+    <div class="glow-orb glow-3"></div>
+  </div>
+
+  <main>
+    <header>
+      <div class="logo">
+        <div class="logo-mark">WJQ</div> <!-- TODO: 1 -->
+        <div class="logo-text">
+          <span>BIRTHDAY PREVIEW</span>
+          <span>FOR YOU ONLY</span>
+        </div>
+      </div>
+      <div class="badge-live">
+        <span class="live-dot"></span>
+        <span>LIVE · Birthday cyber preview online</span>
+      </div>
+    </header>
+
+    <!-- Hero + 倒计时 -->
+    <section class="hero">
+      <div>
+        <h1 class="hero-title">
+          <span class="highlight">Happy Birthday生日快乐呀qiqi</span><br />
+          <span>Preview From A Math Class Stranger</span>
+        </h1>
+        <p class="hero-sub-en">
+          From an ordinary day in an ISC math class to your birthday at midnight – this is a small
+          corner of the internet quietly reserved for you.
+        </p>
+        <p class="hero-sub-cn">
+          从一节 <strong>ISC 数学课</strong> 上很普通的一天，到你即将到来的生日零点，<br />
+          这是在赛博角落里，悄悄点亮的一块霓虹区域。（赛博贺卡）
+          <!-- TODO: 1 -->
+        </p>
+
+        <div class="hero-cta">
+          <button class="btn-primary" onclick="scrollToGame()">
+            🎮 Unlock your gift
+            <span style="font-size: 11px;">点亮游戏</span>
+          </button>
+          <button class="btn-ghost" onclick="scrollToMemories()">
+            📼 Memory strip
+            <span style="font-size: 11px;">一点点记忆胶片</span>
+          </button>
+        </div>
+
+        <div class="hero-meta">
+          <span><div class="dot"></div> Target · 00:00 · 30 NOV 2025</span>
+          <span><div class="dot"></div> Europe / Dublin · 本地时间</span>
+        </div>
+      </div>
+
+      <aside class="card">
+        <div class="card-inner">
+          <div class="countdown-label">
+            <span>COUNTDOWN TO YOUR DAY</span>
+            <span>生日倒计时</span>
+          </div>
+          <div class="countdown-grid" id="countdown"></div>
+          <div class="count-extra">
+            <span>When this hits 00:00, your new age starts.</span>
+            <span class="pill">⏳ live sync · 实时更新</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- Memories -->
+    <section id="memories">
+      <h2 class="section-title">MEMORY STRIP</h2>
+      <p class="section-sub-en">
+        The way some tiny moments stay like burned-in frames.
+      </p>
+      <p class="section-sub-cn">
+        嘿嘿这里就是把几个在脑海里停留很久的小片段，换成一张张“记忆胶片”。
+      </p>
+
+      <div class="memory-strip">
+        <!-- 记忆 01：ISC 数学课（第一次见到的地方） -->
+        <article class="memory-card">
+          <div class="memory-photo">
+            <!-- TODO: 2 -->
+            <img src="memory1.jpg" alt="这个为什么不显示啊啊啊" />
+            <span class="memory-tag">01 · isc math</span>
+          </div>
+          <div class="memory-body">
+            That first time I really noticed you in ISC math – in group work,
+            just the quiet feeling of “oh, this person seems… different.”
+          </div>
+          <div class="memory-cn">
+            第一次在 ISC 数学课上认真注意到你的时候，<br />
+            就是一起做小组作业，只是感觉：<br />
+            “啊，感觉你好像和别人不太一样。”
+          </div>
+          <div class="memory-meta">
+            <span></span>
+            <span>记忆 01</span>
+          </div>
+        </article>
+
+        <!-- 记忆 02 -->
+        <article class="memory-card">
+          <div class="memory-photo">
+            <!-- TODO: 3-->
+            <img src="memory2.jpg" alt="这是真没图" />
+            <span class="memory-tag">02 · detail</span>
+          </div>
+          <div class="memory-body">
+            I still remember those days when we studied together — I really miss that time.
+
+          </div>
+          <div class="memory-cn">
+            记得当时我们一起学习<br />
+            我真的很怀念那段时间。
+          </div>
+          <div class="memory-meta">
+            <span>（什么时候能继续一起学习，感觉好久没看见你了）</span>
+            <span>记忆 02</span>
+          </div>
+        </article>
+
+        <!-- 记忆 03：留给你自己写 -->
+        <article class="memory-card">
+          <div class="memory-photo">
+            <!-- TODO: 把 memory3.jpg 放在同一个文件夹 -->
+            <img src="memory3.jpg" alt="Special moment" />
+            <span class="memory-tag">03 · moment</span>
+          </div>
+          <div class="memory-body">
+            I still remember when we went out together playing games at night — those moments made me genuinely happy.
+          </div>
+          <div class="memory-cn">
+            当时我们一起出去玩买东西，还有晚上玩游戏，我都超级开心记忆犹新
+          </div>
+          <div class="memory-meta">
+            <span>（你到底什么时候还有空啊啊啊啊啊啊）</span>
+            <span>记忆 03</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Game + Gift -->
+    <section id="game">
+      <div class="game-wrapper">
+        <div class="game-inner">
+          <div class="game-head">
+            <div class="game-label">NEON ORBS MINI GAME</div>
+            <div class="lock-status">
+              <div class="lock-dot"></div>
+              <span id="lockText">Gift locked · 礼物未解锁</span>
+            </div>
+          </div>
+          <p class="game-instruction">
+            Tap the three golden orbs and light them all up. When all of them are glowing,
+            your birthday gift section will unlock.
+          </p>
+          <p class="game-instruction-cn">
+            点亮这三个金色的小能量球。<br />
+            当它们都发光的时候，下面真正的生日礼物区域就会自动解锁。
+          </p>
+
+          <div class="game-area">
+            <div class="game-orb" data-index="0"><span>ORB 01</span></div>
+            <div class="game-orb" data-index="1"><span>ORB 02</span></div>
+            <div class="game-orb" data-index="2"><span>ORB 03</span></div>
+            <div class="game-hint">
+              ✨ Tip / 小提示：想多试几次也没关系，这只是个小小游戏。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gift-section">
+        <div class="gift-lock-overlay">
+          <span>礼物区域已上锁 · 请先完成上面的小小霓虹游戏，再回来看看这里会变成什么样子。</span>
+        </div>
+
+        <div class="gift-inner">
+          <div class="gift-head">
+            <span>DIGITAL LETTER & POEM CARDS</span>
+            <span>数字贺卡</span>
+          </div>
+          <div class="gift-grid">
+            <!-- 数字信件 -->
+            <div class="letter-box">
+              <div class="letter-label">DIGITAL LETTER · 数字信件</div>
+              <p class="letter-en">
+                
+              </p>
+              <p class="letter-cn">
+                其实有时候我会突然想起我们一起度过的那些很普通的瞬间，不是什么大事，也不是什么值得特别记下来的场面，就是一起玩游戏、一起跑去吃好吃的、或者一起出去随便逛逛的日子。想起来的时候，心情总会莫名变得很好。认识你也没有很久，大概也就半年多一点，可不知道为什么，你成了那种会在我脑子里留下很多小片段的人。每次想到你，总会带着一点我自己也说不上来的轻松和愉快。可能你也能感觉到吧，我其实挺怀念那些我们一起随便做什么都觉得很好玩的时刻。我总觉得，跟你在一起的时间，会比和别人相处时更在意一点、也更珍惜一点（虽然有时候有点焦灼）。没写的那部分，可能才是最重要的嘿嘿。虽然但是，新的一年里，一定会高高兴兴，一切顺利，能上无敌战神滴！！！（另外：什么时候可以下次出去玩啊啊啊啊）
+                生日快乐！！！！！！！！！！！！！！！！
+
+              </p>
+              <div class="letter-sign">
+                <span>from someone who remembered your birthday</span>
+                <span>by：JY</span>
+                <!-- TODO: 4 -->
+              </div>
+            </div>
+
+            <!-- 诗卡滑动 -->
+            <div class="poem-wrapper">
+              <div class="poem-label">SLIDE CARDS · 卡片</div>
+              <div class="poem-track">
+                <div class="poem-inner" id="poemInner">
+                  <div class="poem-card">
+                    <div class="poem-en">
+                       
+                    <div class="poem-cn">
+                      【卡片 1】我总觉得，无论现在的你怎么说，
+未来的你一定会成为那个在商科领域里很厉害、
+别人一听名字就会点头的那种人嘿嘿。
+
+
+                    </div>
+                  </div>
+                  <div class="poem-card">
+                    <div class="poem-en">
+                       
+                    </div>
+                    <div class="poem-cn">
+                      【卡片 2】我最近一直在想吃好吃的，
+尤其是我们上次说好的那些——
+一起回北京要去吃的那几家店。
+说真的，我到现在还记得得特别清楚，
+可是它们到现在都还只存在于“我们说过”的那句约定里。
+什么时候才能真的吃到啊啊啊啊啊啊啊啊啊啊啊啊啊
+
+                    </div>
+                  </div>
+                  <div class="poem-card">
+                    <div class="poem-en">
+                      
+                    </div>
+                    <div class="poem-cn">
+                      【卡片 3】这个网页很简单，但它是认认真真做出来的，就像我记住关于你的那些小事情一样，没什么声势，却是认真的。（累死我了啊啊啊啊而且怎么对不齐我也不知道了）
+                    </div>
+                  </div>
+                  <!-- TODO:  -->
+                </div>
+              </div>
+              <div class="poem-controls">
+                <span id="poemIndicator">1 / 3</span>
+                <div class="poem-buttons">
+                  <button class="poem-btn" id="prevBtn">Prev</button>
+                  <button class="poem-btn" id="nextBtn">Next</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>⏳ <strong>Preview fades when your new age begins.</strong></span>
+      <span>Made quietly for you · 一个从 ISC 数学课延伸出来的小小网页 by：JY</span>
+      <!-- TODO: -->
+    </footer>
+  </main>
+
+  <script>
+    // =====
+    const particleCanvas = document.getElementById("particleCanvas");
+    const ctx = particleCanvas.getContext("2d");
+    let particles = [];
+    const PARTICLE_COUNT = 90;
+    const MAX_SPEED = 0.35;
+    const LINK_DISTANCE = 140;
+    const MOUSE_INFLUENCE = 120;
+    let mouse = { x: null, y: null };
+    const dpr = window.devicePixelRatio || 1;
+
+    function resizeCanvas() {
+      const rect = particleCanvas.getBoundingClientRect();
+      particleCanvas.width = rect.width * dpr;
+      particleCanvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+    }
+    resizeCanvas();
+
+    window.addEventListener("resize", () => {
+      // 重置 scale
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      resizeCanvas();
+      createParticles();
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+    window.addEventListener("mouseleave", () => {
+      mouse.x = null;
+      mouse.y = null;
+    });
+
+    function createParticles() {
+      particles = [];
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          r: Math.random() * 1.7 + 0.6,
+          vx: (Math.random() - 0.5) * MAX_SPEED,
+          vy: (Math.random() - 0.5) * MAX_SPEED
+        });
+      }
+    }
+    createParticles();
+
+    function drawParticles() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      ctx.clearRect(0, 0, width, height);
+
+      // 画连线
+      for (let i = 0; i < particles.length; i++) {
+        const p1 = particles[i];
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < LINK_DISTANCE) {
+            const alpha = 1 - dist / LINK_DISTANCE;
+            ctx.strokeStyle = `rgba(148, 163, 184, ${alpha * 0.4})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // 画粒子
+      for (let p of particles) {
+        // 鼠标影响
+        if (mouse.x !== null) {
+          const dx = mouse.x - p.x;
+          const dy = mouse.y - p.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < MOUSE_INFLUENCE && dist > 0) {
+            // 稍微朝鼠标偏一点
+            const force = (MOUSE_INFLUENCE - dist) / MOUSE_INFLUENCE * 0.008;
+            p.vx += (dx / dist) * force;
+            p.vy += (dy / dist) * force;
+          }
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // 轻微阻尼，让速度不会无限涨
+        p.vx *= 0.98;
+        p.vy *= 0.98;
+
+        // 越界回到另一侧
+        if (p.x < -20) p.x = width + 20;
+        if (p.x > width + 20) p.x = -20;
+        if (p.y < -20) p.y = height + 20;
+        if (p.y > height + 20) p.y = -20;
+
+        const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 6);
+        grd.addColorStop(0, "rgba(250, 204, 21, 0.9)");
+        grd.addColorStop(0.5, "rgba(234, 179, 8, 0.4)");
+        grd.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      requestAnimationFrame(drawParticles);
+    }
+    drawParticles();
+
+    // ===== 倒计时 =====
+    const targetDate = new Date("2025-11-30T00:00:00");
+    const countdownEl = document.getElementById("countdown");
+
+    function updateCountdown() {
+      const now = new Date();
+      let diff = targetDate - now;
+
+      if (diff <= 0) {
+        countdownEl.innerHTML = `
+          <div class="count-box"><div class="count-number">00</div><div class="count-label">days</div></div>
+          <div class="count-box"><div class="count-number">00</div><div class="count-label">hours</div></div>
+          <div class="count-box"><div class="count-number">00</div><div class="count-label">mins</div></div>
+          <div class="count-box"><div class="count-number">00</div><div class="count-label">secs</div></div>
+        `;
+        return;
+      }
+
+      const totalSeconds = Math.floor(diff / 1000);
+      const days = Math.floor(totalSeconds / (3600 * 24));
+      const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      const secs = totalSeconds % 60;
+
+      const pad = (n) => String(n).padStart(2, "0");
+
+      countdownEl.innerHTML = `
+        <div class="count-box"><div class="count-number">${pad(days)}</div><div class="count-label">days</div></div>
+        <div class="count-box"><div class="count-number">${pad(hours)}</div><div class="count-label">hours</div></div>
+        <div class="count-box"><div class="count-number">${pad(mins)}</div><div class="count-label">mins</div></div>
+        <div class="count-box"><div class="count-number">${pad(secs)}</div><div class="count-label">secs</div></div>
+      `;
+    }
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+
+    // ===== 小游戏：点亮三个 ORB 解锁礼物 =====
+    const orbs = document.querySelectorAll(".game-orb");
+    const lockText = document.getElementById("lockText");
+    let orbState = [false, false, false];
+    let unlocked = false;
+
+    function checkUnlock() {
+      if (orbState.every(Boolean) && !unlocked) {
+        unlocked = true;
+        document.body.classList.add("unlocked");
+        lockText.textContent = "Gift unlocked · 礼物已解锁";
+      }
+    }
+
+    orbs.forEach((orb) => {
+      orb.addEventListener("click", () => {
+        const index = Number(orb.dataset.index);
+        orbState[index] = !orbState[index];
+        orb.classList.toggle("active", orbState[index]);
+        checkUnlock();
+      });
+    });
+
+    // ===== 诗卡滑动 =====
+    const poemInner = document.getElementById("poemInner");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const poemIndicator = document.getElementById("poemIndicator");
+    const poemCards = poemInner ? poemInner.children.length : 0;
+    let currentIndex = 0;
+
+    function updatePoemView() {
+      const offset = -currentIndex * 100;
+      poemInner.style.transform = `translateX(${offset}%)`;
+      poemIndicator.textContent = `${currentIndex + 1} / ${poemCards}`;
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === poemCards - 1;
+    }
+
+    if (poemCards > 0) {
+      updatePoemView();
+    }
+
+    prevBtn.addEventListener("click", () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updatePoemView();
+      }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (currentIndex < poemCards - 1) {
+        currentIndex++;
+        updatePoemView();
+      }
+    });
+
+    // ===== 滚动跳转 =====
+    function scrollToGame() {
+      document.getElementById("game").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    function scrollToMemories() {
+      document.getElementById("memories").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    // 挂到 window，按钮 onclick 才能用
+    window.scrollToGame = scrollToGame;
+    window.scrollToMemories = scrollToMemories;
+  </script>
+</body>
+</html>
